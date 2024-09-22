@@ -11,7 +11,10 @@ const FormSchema = z.object({
   status: z.enum(['pending', 'paid']),
   date: z.string(),
 });
+
+//using zod to update expected types
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
+const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
 export async function createInvoice(formData: FormData) {
       const { customerId, amount, status } = CreateInvoice.parse({
@@ -29,4 +32,35 @@ export async function createInvoice(formData: FormData) {
       revalidatePath('/dashboard/invoices');
       redirect('/dashboard/invoices');
 
+}
+
+
+/*
+Similarly to the createInvoice action, here you are:
+
+Extracting the data from formData.
+Validating the types with Zod.
+Converting the amount to cents.
+Passing the variables to your SQL query.
+Calling revalidatePath to clear the client cache and make a new server request.
+Calling redirect to redirect the user to the invoice's page.
+*/
+
+export async function updateInvoice(id: string, formData: FormData) {
+  const { customerId, amount, status } = UpdateInvoice.parse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+ 
+  const amountInCents = amount * 100;
+ 
+  await sql`
+    UPDATE invoices
+    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+    WHERE id = ${id}
+  `;
+ 
+  revalidatePath('/dashboard/invoices');
+  redirect('/dashboard/invoices');
 }
